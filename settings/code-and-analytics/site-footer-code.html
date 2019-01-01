@@ -1,10 +1,32 @@
-<script>
+<style type="text/css">
+    /* Set background image of entire course player, including behind header.
+       Clear existing background colours. */
+    .course-player {
+        background: rgba(0, 0, 0, 0) !important;
+    }
+    .course-player > main > section {
+        background: rgba(0, 0, 0, 0) !important;
+    }
+    #main-content {
+        background: rgba(0, 0, 0, 0) !important;
+    }
+    #player-wrapper {
+        background: url('https://raw.githubusercontent.com/warmsound/ladle-thinkific/master/resources/lesson-background.png');
+    }
+    
+    /* Hard-code semi-transparent background colour for top bar. */
+    .course-player__top-bar {
+        background-color: rgba(27, 158, 234, 0.5) !important;
+    }
+</style>
+
+<script type="text/javascript">
+    // Send lesson completion data to Google Sheets.
     $(function() {
         if(typeof(CoursePlayerV2) !== 'undefined') {
             CoursePlayerV2.on('hooks:contentWasCompleted', function(data) {
                 data.user = Thinkific.current_user;
                 
-                // Send lesson completion data to Google Sheets.
                 const URL = 'https://script.google.com/macros/s/AKfycbwjN5WYg9KqiBVssqNtFT4XvRoiqIS4L5hScAp8rNIMptOY4l4/exec';
                 
                 // Param names must match sheet headers.
@@ -35,26 +57,8 @@
             })
             .join('&');
     }
+
+    // Autopilot integration.
+    (function(o){var b="https://api.autopilothq.com/anywhere/",t="12edc86250af4e64a982146c9bf7f9f6e7ed944cf4924a3c8db62aaab1bf0de4",a=window.AutopilotAnywhere={_runQueue:[],run:function(){this._runQueue.push(arguments);}},c=encodeURIComponent,s="SCRIPT",d=document,l=d.getElementsByTagName(s)[0],p="t="+c(d.title||"")+"&u="+c(d.location.href||"")+"&r="+c(d.referrer||""),j="text/javascript",z,y;if(!window.Autopilot) window.Autopilot=a;if(o.app) p="devmode=true&"+p;z=function(src,asy){var e=d.createElement(s);e.src=src;e.type=j;e.async=asy;l.parentNode.insertBefore(e,l);};y=function(){z(b+t+'?'+p,true);};if(window.attachEvent){window.attachEvent("onload",y);}else{window.addEventListener("load",y,false);}})({});
 </script>
 
-<style type="text/css">
-    /* Set background image of entire course player, including behind header.
-       Clear existing background colours. */
-    .course-player {
-        background: rgba(0, 0, 0, 0) !important;
-    }
-    .course-player > main > section {
-        background: rgba(0, 0, 0, 0) !important;
-    }
-    #main-content {
-        background: rgba(0, 0, 0, 0) !important;
-    }
-    #player-wrapper {
-        background: url('https://raw.githubusercontent.com/warmsound/ladle-thinkific/master/resources/lesson-background.png');
-    }
-    
-    /* Hard-code semi-transparent background colour for top bar. */
-    .course-player__top-bar {
-        background-color: rgba(27, 158, 234, 0.5) !important;
-    }
-</style>
