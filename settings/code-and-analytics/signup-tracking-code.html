@@ -1,17 +1,2 @@
 <script type="text/javascript">
-    // Autopilot loaded in site footer, so need to check if ready before running user association after sign-up.
-    var checkAutopilotReady = setInterval(function() {
-        if (Autopilot) {
-            Autopilot.run('associate', {
-                Email: '{{email}}',
-                FirstName: '{{first_name}}',
-                LastName: '{{last_name}}',
-                custom: {
-                 'integer--user_id': {{id}},
-                 'integer--created_at': {{created_at}}
-                }
-            });
-            clearInterval(checkAutopilotReady);
-        }
-    }, 1000);
 </script>
