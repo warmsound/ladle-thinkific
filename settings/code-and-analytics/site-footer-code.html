@@ -23,12 +23,12 @@
 </style>
 
 <script type="text/javascript">
-    // Send lesson completion data to Google Sheets.
     $(function() {
         if(typeof(CoursePlayerV2) !== 'undefined') {
             CoursePlayerV2.on('hooks:contentWasCompleted', function(data) {
                 data.user = Thinkific.current_user;
                 
+                // Send lesson completion data to Google Sheets.
                 const URL = 'https://script.google.com/macros/s/AKfycbwjN5WYg9KqiBVssqNtFT4XvRoiqIS4L5hScAp8rNIMptOY4l4/exec';
                 
                 // Param names must match sheet headers.
@@ -44,6 +44,13 @@
                 let xhr = new XMLHttpRequest();
                 xhr.open('GET', URL + '?' + formatParams(params));
                 xhr.send();
+
+                // Send lesson completion data to Segment.
+                analytics.track('Lesson Completed', {
+
+                    // Only property accepted is acValue - see https://segment.com/docs/destinations/activecampaign/.
+                    acValue: data.lesson.name
+                });
                 
                 console.log(data);
                 

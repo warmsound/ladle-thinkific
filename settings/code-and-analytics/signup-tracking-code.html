@@ -1,2 +1,11 @@
 <script type="text/javascript">
+    // Segment loaded in site footer, so need to check if ready before tracking sign-up.
+    var checkSegmentReady = setInterval(function() {
+        if (analytics) {
+            analytics.track('User Signed Up', {
+                acValue: {{id}}
+            });
+            clearInterval(checkSegmentReady);
+        }
+    }, 1000);
 </script>
