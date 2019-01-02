@@ -1,2 +1,2 @@
 # ladle-thinkific
-Code supporting ladle.teachable.com
+Code supporting ladle.thinkific.com
