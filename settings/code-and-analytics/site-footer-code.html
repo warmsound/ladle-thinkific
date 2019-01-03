@@ -23,52 +23,130 @@
 </style>
 
 <script type="text/javascript">
-    $(function() {
-        if(typeof(CoursePlayerV2) !== 'undefined') {
 
-            // Attempt to determine full course data, for better event tracking.
-            let courseData;
+    let courseData;
+    let enrollmentData;
 
-            // Determine course "slug" (course ID used in URL) from hidden input.
-            const courseSlugInput = document.querySelector('input#CourseSlug');
-            const courseSlug = courseSlugInput && courseSlugInput.value;
-            if (courseSlug) {
+    // Inlined Ajax-hook: https://github.com/wendux/Ajax-hook.
+    !function(t){function r(i){if(n[i])return n[i].exports;var e=n[i]={exports:{},id:i,loaded:!1};return t[i].call(e.exports,e,e.exports,r),e.loaded=!0,e.exports}var n={};return r.m=t,r.c=n,r.p="",r(0)}([function(t,r,n){n(1)(window)},function(t,r){t.exports=function(t){t.hookAjax=function(t){function r(r){return function(){var n=this.hasOwnProperty(r+"_")?this[r+"_"]:this.xhr[r],i=(t[r]||{}).getter;return i&&i(n,this)||n}}function n(r){return function(n){var i=this.xhr,e=this,o=t[r];if("function"==typeof o)i[r]=function(){t[r](e)||n.apply(i,arguments)};else{var h=(o||{}).setter;n=h&&h(n,e)||n;try{i[r]=n}catch(t){this[r+"_"]=n}}}}function i(r){return function(){var n=[].slice.call(arguments);if(!t[r]||!t[r].call(this,n,this.xhr))return this.xhr[r].apply(this.xhr,n)}}return window._ahrealxhr=window._ahrealxhr||XMLHttpRequest,XMLHttpRequest=function(){this.xhr=new window._ahrealxhr;for(var t in this.xhr){var e="";try{e=typeof this.xhr[t]}catch(t){}"function"===e?this[t]=i(t):Object.defineProperty(this,t,{get:r(t),set:n(t)})}},window._ahrealxhr},t.unHookAjax=function(){window._ahrealxhr&&(XMLHttpRequest=window._ahrealxhr),window._ahrealxhr=void 0},t.default=t}}]);
 
-                // Request course data using undocumented course player V2 API:
-                // https://ladle.thinkific.com/api/course_player/v2/courses/[courseSlug]
-                get('https://ladle.thinkific.com/api/course_player/v2/courses/' + courseSlug, function() {
-                    courseData = JSON.parse(this.responseText);
-                });
+    // Hook all XMLHttpRequest calls, so that we can record course data once, and enrollment data (lesson completions, etc.)
+    // each time it changes.
+    let ajaxHooks = {
+        onload: function(xhr) {
+
+            // Record course data in response to:
+            // https://ladle.thinkific.com/api/course_player/v2/courses/ladle-weight-loss-course.
+            if (/\/courses/.test(xhr._open.url)) {
+                courseData = JSON.parse(xhr.responseText);
+
+            // Record updated enrollment data in repsonse to:
+            // https://ladle.thinkific.com/api/course_player/v2/enrollments/[enrollment_id]. 
+            } else if (/\/enrollments/.test(xhr._open.url)) {
+                let newEnrollmentData = JSON.parse(xhr.responseText);
+
+                // By comparing old and new enrollment data, we can determine if a chapter was completed.
+                // Can't use CoursePlayerV2 hooks:contentWasCompleted, because this is not fired on completion of a survey (and
+                // possibly other content type).
+                let completedChapter = getCompletedChapter(enrollmentData, newEnrollmentData);
+                if (completedChapter) {
+
+                    // Send chapter completion data to Segment.
+                    analytics.track('Chapter Completed', {
+                        acValue: completedChapter.name
+                    });
+                }
+
+                // Record the new enrollment data after comparison with old.
+                enrollmentData = newEnrollmentData;
+            }
+        },
+
+        open: function(args, xhr) {
+
+            // Record URL just opened, for use in onload().
+            this._open = {
+                method: args[0],
+                url: args[1],
+                async: args[2]
+            };
+        }
+    };   
+    hookAjax(ajaxHooks);
+
+    // Return data for any chapter completed, null otherwise.
+    // Determine by comparing old and new enrollment data.
+    function getCompletedChapter(oldEnrollmentData, newEnrollmentData) {
+        if (!(oldEnrollmentData && newEnrollmentData)) {
+            return null;
+        }
+
+        // For each chapter.
+        let i, chapter;
+        for (i = 0; i < courseData.chapters.length; ++i) {
+            chapter = courseData.chapters[i];
+
+            let chapterWasComplete = true;
+            let chapterIsComplete = true;
+            let j, lessonId;
+
+            // For each lesson in chapter.
+            for (j = 0; j < chapter.content_ids.length; ++j) {
+                lessonId = chapter.content_ids[j];
+
+                // Lesson was complete if marked as such in old enrollment data.
+                let lessonWasComplete = (oldEnrollmentData.user_contents.filter(function(content) {
+                    return ((content.content_id == lessonId) && content.complete);
+                }).length == 1);
+
+                if (!lessonWasComplete) {
+                    chapterWasComplete = false;
+                    break;
+                }
             }
 
-            CoursePlayerV2.on('hooks:contentWillChange', function(data) {
-                console.log('contentWillChange', data);
-            });
+            // For each lesson in chapter.
+            for (j = 0; j < chapter.content_ids.length; ++j) {
+                lessonId = chapter.content_ids[j];
+
+                // Lesson is complete if marked as such in new enrollment data.
+                let lessonIsComplete = (newEnrollmentData.user_contents.filter(function(content) {
+                    return ((content.content_id == lessonId) && content.complete);
+                }).length == 1);
+
+                if (!lessonIsComplete) {
+                    chapterIsComplete = false;
+                    break;
+                }
+            }
+
+            // Chapter has just been completed if it wasn't complete, but now is.
+            if (!chapterWasComplete && chapterIsComplete) {
+                return chapter;
+            }
+        }
+
+        return null;
+    }
+
+    $(function() {
+        if(typeof(CoursePlayerV2) !== 'undefined') {
 
             // Documentation about sending parameterised events to ActiveCampaign: https://segment.com/docs/destinations/activecampaign/.
             // Documentation about CoursePlayerV2 hooks: https://help.thinkific.com/support/solutions/articles/229501-how-to-track-additional-events-in-mixpanel-using-event-hooks.
             // - This is fired after a student has navigated to a new lesson.
             CoursePlayerV2.on('hooks:contentDidChange', function(data) {
-                console.log('contentDidChange', data);
-                
-                if (courseSlug) {
+                //console.log('contentDidChange', data);
 
-                    // Request enrollment data using undocumented course player V2 API:
-                    // https://ladle.thinkific.com/api/course_player/v2/enrollments?course_slug=[courseSlug]
-                    get('https://ladle.thinkific.com/api/course_player/v2/enrollments?course_slug=' + courseSlug, function() {
-                        let enrollmentData = JSON.parse(this.responseText);
+                let lessonIsComplete = (enrollmentData.user_contents.filter(function(content) {
+                    return ((content.content_id == data.lesson.id) && (content.complete == true));
+                }).length > 0);
 
-                        let lessonIsComplete = (enrollmentData.user_contents.filter(function(content) {
-                            return ((content.content_id == data.lesson.id) && (content.complete == true));
-                        }).length > 0);
+                if (!lessonIsComplete) {
 
-                        if (!lessonIsComplete) {
-
-                            // Send lesson started data to Segment, for incomplete lessons only.
-                            analytics.track('Lesson Started', {
-                                acValue: data.lesson.name //getFriendlyLessonId(data)
-                            });
-                        }
+                    // Send lesson started data to Segment, for incomplete lessons only.
+                    analytics.track('Lesson Started', {
+                        acValue: data.lesson.name
                     });
                 }
 
@@ -80,7 +158,7 @@
 
             // - This is fired when the student clicks the "Next" button and completes the lesson.
             CoursePlayerV2.on('hooks:contentWasCompleted', function(data) {
-                console.log('contentWasCompleted', data);
+                //console.log('contentWasCompleted', data);
 
                 data.user = Thinkific.current_user;
                 
@@ -99,36 +177,6 @@
 
                 get(URL + '?' + paramsToURLQuery(params));
 
-                if (courseSlug) {
-
-                    // Request enrollment data using undocumented course player V2 API:
-                    // https://ladle.thinkific.com/api/course_player/v2/enrollments?course_slug=[courseSlug]
-                    get('https://ladle.thinkific.com/api/course_player/v2/enrollments?course_slug=' + courseSlug, function() {
-                        let enrollmentData = JSON.parse(this.responseText);
-
-                        let thisChapter = courseData.chapters.filter(function(chapter) {
-                            return (chapter.id == data.chapter.id);
-                        })[0];
-
-                        let completedLessonsInThisChapter = enrollmentData.user_contents.filter(function(content) {
-                            // This lesson is in this chapter AND this lesson is complete.
-                            return ((thisChapter.content_ids.indexOf(content.content_id) != -1) && content.complete);
-                        });
-
-                        // All lessons in this chapter are complete.
-                        let thisChapterIsComplete = (completedLessonsInThisChapter.length == thisChapter.content_ids.length);
-
-                        if (thisChapterIsComplete) {
-                            console.log('Chapter Complete');
-
-                            // Send chapter completed data to Segment.
-                            //analytics.track('Lesson Started', {
-                            //    acValue: data.lesson.name //getFriendlyLessonId(data)
-                            //});
-                        }
-                    });
-                }
-
                 // Send lesson completion data to Segment.
                 analytics.track('Lesson Completed', {
                     acValue: data.lesson.name
@@ -143,7 +191,7 @@
                             onSuccessResponse.call(this);
                         }
                     };
-                }                
+                }
                 xhr.open("GET", url);
                 xhr.send();
             }
@@ -154,16 +202,6 @@
                         return key + '=' + encodeURIComponent(params[key])
                     })
                     .join('&');
-            }
-
-            // Return string in format:
-            // "[chapter_index]-[lesson_index]"
-            // where all indices are zero-based.
-            function getFriendlyLessonId(data) {
-                let chapterIds = courseData.course.chapter_ids;
-                return chapterIds.indexOf(parseInt(data.chapter.id))
-                    + '-'
-                    + data.lesson.position
             }
         }
     });
