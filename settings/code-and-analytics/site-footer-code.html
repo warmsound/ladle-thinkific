@@ -36,52 +36,40 @@
 
                 // Request course data using undocumented course player V2 API:
                 // https://ladle.thinkific.com/api/course_player/v2/courses/[courseSlug]
-                const URL = 'https://ladle.thinkific.com/api/course_player/v2/courses/' + courseSlug;
-
-                let xhr = new XMLHttpRequest();
-                xhr.onreadystatechange = function() {
-                    if ((this.readyState == 4) && (this.status == 200)) {
-                        courseData = JSON.parse(this.responseText);
-                    }
-                };
-                xhr.open("GET", URL);
-                xhr.send();
+                get('https://ladle.thinkific.com/api/course_player/v2/courses/' + courseSlug, function() {
+                    courseData = JSON.parse(this.responseText);
+                });
             }
+
+            CoursePlayerV2.on('hooks:contentWillChange', function(data) {
+                console.log('contentWillChange', data);
+            });
 
             // Documentation about sending parameterised events to ActiveCampaign: https://segment.com/docs/destinations/activecampaign/.
             // Documentation about CoursePlayerV2 hooks: https://help.thinkific.com/support/solutions/articles/229501-how-to-track-additional-events-in-mixpanel-using-event-hooks.
             // - This is fired after a student has navigated to a new lesson.
             CoursePlayerV2.on('hooks:contentDidChange', function(data) {
-
-                // Attempt to determine latest enrollment data, to determine if user has completed this lesson yet.
-                let enrollmentData;
+                console.log('contentDidChange', data);
                 
                 if (courseSlug) {
 
                     // Request enrollment data using undocumented course player V2 API:
                     // https://ladle.thinkific.com/api/course_player/v2/enrollments?course_slug=[courseSlug]
-                    const URL = 'https://ladle.thinkific.com/api/course_player/v2/enrollments?course_slug=' + courseSlug;
+                    get('https://ladle.thinkific.com/api/course_player/v2/enrollments?course_slug=' + courseSlug, function() {
+                        let enrollmentData = JSON.parse(this.responseText);
 
-                    let xhr = new XMLHttpRequest();
-                    xhr.onreadystatechange = function() {
-                        if ((this.readyState == 4) && (this.status == 200)) {
-                            enrollmentData = JSON.parse(this.responseText);
+                        let lessonIsComplete = (enrollmentData.user_contents.filter(function(content) {
+                            return ((content.content_id == data.lesson.id) && (content.complete == true));
+                        }).length > 0);
 
-                            let isThisLessonComplete = (enrollmentData.user_contents.filter(function(content) {
-                                return ((content.content_id == data.lesson.id) && (content.complete == true));
-                            }).length > 0);
+                        if (!lessonIsComplete) {
 
-                            if (!isThisLessonComplete) {
-
-                                // Send lesson started data to Segment, for incomplete lessons only.
-                                analytics.track('Lesson Started', {
-                                   acValue: data.lesson.name //getFriendlyLessonId(data)
-                                });
-                            }
+                            // Send lesson started data to Segment, for incomplete lessons only.
+                            analytics.track('Lesson Started', {
+                                acValue: data.lesson.name //getFriendlyLessonId(data)
+                            });
                         }
-                    };
-                    xhr.open("GET", URL);
-                    xhr.send();
+                    });
                 }
 
                 // Send lesson viewed data to Segment, for both incomplete and completed lessons.
@@ -92,6 +80,8 @@
 
             // - This is fired when the student clicks the "Next" button and completes the lesson.
             CoursePlayerV2.on('hooks:contentWasCompleted', function(data) {
+                console.log('contentWasCompleted', data);
+
                 data.user = Thinkific.current_user;
                 
                 // Send lesson completion data to Google Sheets.
@@ -107,15 +97,56 @@
                     lesson_id: data.lesson.id
                 };
 
-                let xhr = new XMLHttpRequest();
-                xhr.open('GET', URL + '?' + paramsToURLQuery(params));
-                xhr.send();
+                get(URL + '?' + paramsToURLQuery(params));
+
+                if (courseSlug) {
+
+                    // Request enrollment data using undocumented course player V2 API:
+                    // https://ladle.thinkific.com/api/course_player/v2/enrollments?course_slug=[courseSlug]
+                    get('https://ladle.thinkific.com/api/course_player/v2/enrollments?course_slug=' + courseSlug, function() {
+                        let enrollmentData = JSON.parse(this.responseText);
+
+                        let thisChapter = courseData.chapters.filter(function(chapter) {
+                            return (chapter.id == data.chapter.id);
+                        })[0];
+
+                        let completedLessonsInThisChapter = enrollmentData.user_contents.filter(function(content) {
+                            // This lesson is in this chapter AND this lesson is complete.
+                            return ((thisChapter.content_ids.indexOf(content.content_id) != -1) && content.complete);
+                        });
+
+                        // All lessons in this chapter are complete.
+                        let thisChapterIsComplete = (completedLessonsInThisChapter.length == thisChapter.content_ids.length);
+
+                        if (thisChapterIsComplete) {
+                            console.log('Chapter Complete');
+
+                            // Send chapter completed data to Segment.
+                            //analytics.track('Lesson Started', {
+                            //    acValue: data.lesson.name //getFriendlyLessonId(data)
+                            //});
+                        }
+                    });
+                }
 
                 // Send lesson completion data to Segment.
                 analytics.track('Lesson Completed', {
                     acValue: data.lesson.name
                 });
             });
+
+            function get(url, onSuccessResponse) {
+                let xhr = new XMLHttpRequest();
+                if (onSuccessResponse) {
+                    xhr.onreadystatechange = function() {
+                        if ((this.readyState == 4) && (this.status == 200)) {
+                            onSuccessResponse.call(this);
+                        }
+                    };
+                }                
+                xhr.open("GET", url);
+                xhr.send();
+            }
 
             function paramsToURLQuery(params) {
                 return Object.keys(params)
