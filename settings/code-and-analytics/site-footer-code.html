@@ -138,7 +138,8 @@
             CoursePlayerV2.on('hooks:contentDidChange', function(data) {
                 //console.log('contentDidChange', data);
 
-                let lessonIsComplete = (enrollmentData.user_contents.filter(function(content) {
+                // enrollmentData.user_contents not present for new users.
+                let lessonIsComplete = enrollmentData.user_contents && (enrollmentData.user_contents.filter(function(content) {
                     return ((content.content_id == data.lesson.id) && (content.complete == true));
                 }).length > 0);
 
