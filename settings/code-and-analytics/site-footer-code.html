@@ -36,7 +36,7 @@
 
                 // Request course data using undocumented course player V2 API:
                 // https://ladle.thinkific.com/api/course_player/v2/courses/[courseSlug]
-                const URL = 'https://ladle.thinkific.com/api/course_player/v2/courses/';
+                const URL = 'https://ladle.thinkific.com/api/course_player/v2/courses/' + courseSlug;
 
                 let xhr = new XMLHttpRequest();
                 xhr.onreadystatechange = function() {
@@ -44,7 +44,7 @@
                         courseData = JSON.parse(this.responseText);
                     }
                 };
-                xhr.open("GET", URL + courseSlug);
+                xhr.open("GET", URL);
                 xhr.send();
             }
 
@@ -53,10 +53,40 @@
             // - This is fired after a student has navigated to a new lesson.
             CoursePlayerV2.on('hooks:contentDidChange', function(data) {
 
-                // Send lesson viewed data to Segment.
-                // TODO: This is sent even for completed lesson.
+                // Attempt to determine latest enrollment data, to determine if user has completed this lesson yet.
+                let enrollmentData;
+                
+                if (courseSlug) {
+
+                    // Request enrollment data using undocumented course player V2 API:
+                    // https://ladle.thinkific.com/api/course_player/v2/enrollments?course_slug=[courseSlug]
+                    const URL = 'https://ladle.thinkific.com/api/course_player/v2/enrollments?course_slug=' + courseSlug;
+
+                    let xhr = new XMLHttpRequest();
+                    xhr.onreadystatechange = function() {
+                        if ((this.readyState == 4) && (this.status == 200)) {
+                            enrollmentData = JSON.parse(this.responseText);
+
+                            let isThisLessonComplete = (enrollmentData.user_contents.filter(function(content) {
+                                return ((content.content_id == data.lesson.id) && (content.complete == true));
+                            }).length > 0);
+
+                            if (!isThisLessonComplete) {
+
+                                // Send lesson started data to Segment, for incomplete lessons only.
+                                analytics.track('Lesson Started', {
+                                   acValue: data.lesson.name //getFriendlyLessonId(data)
+                                });
+                            }
+                        }
+                    };
+                    xhr.open("GET", URL);
+                    xhr.send();
+                }
+
+                // Send lesson viewed data to Segment, for both incomplete and completed lessons.
                 analytics.track('Lesson Viewed', {
-                    acValue: getFriendlyLessonId(data)
+                    acValue: data.lesson.name
                 });
             });
 
@@ -83,7 +113,7 @@
 
                 // Send lesson completion data to Segment.
                 analytics.track('Lesson Completed', {
-                    acValue: getFriendlyLessonId(data)
+                    acValue: data.lesson.name
                 });
             });
 
