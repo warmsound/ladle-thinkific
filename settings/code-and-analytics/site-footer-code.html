@@ -95,7 +95,8 @@
                 lessonId = chapter.content_ids[j];
 
                 // Lesson was complete if marked as such in old enrollment data.
-                let lessonWasComplete = (oldEnrollmentData.user_contents.filter(function(content) {
+                // enrollmentData.user_contents not present for new users.
+                let lessonWasComplete = oldEnrollmentData.user_contents && (oldEnrollmentData.user_contents.filter(function(content) {
                     return ((content.content_id == lessonId) && content.complete);
                 }).length == 1);
 
@@ -110,7 +111,8 @@
                 lessonId = chapter.content_ids[j];
 
                 // Lesson is complete if marked as such in new enrollment data.
-                let lessonIsComplete = (newEnrollmentData.user_contents.filter(function(content) {
+                // enrollmentData.user_contents not present for new users.
+                let lessonIsComplete = newEnrollmentData.user_contents && (newEnrollmentData.user_contents.filter(function(content) {
                     return ((content.content_id == lessonId) && content.complete);
                 }).length == 1);
 
