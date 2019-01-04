@@ -23,6 +23,7 @@
 </style>
 
 <script type="text/javascript">
+    const GOOGLE_URL = 'https://script.google.com/macros/s/AKfycbwjN5WYg9KqiBVssqNtFT4XvRoiqIS4L5hScAp8rNIMptOY4l4/exec';
 
     let courseData;
     let enrollmentData;
@@ -42,7 +43,7 @@
                 courseData = JSON.parse(xhr.responseText);
 
             // Record updated enrollment data in repsonse to:
-            // https://ladle.thinkific.com/api/course_player/v2/enrollments/[enrollment_id]. 
+            // https://ladle.thinkific.com/api/course_player/v2/enrollments/{id}. 
             } else if (/\/enrollments/.test(xhr._open.url)) {
                 let newEnrollmentData = JSON.parse(xhr.responseText);
 
@@ -76,12 +77,33 @@
         send: function(args, xhr) {
             let body = args[0];
 
-            // If sending survey answer for weight question, also send to Segment.
+            // If sending survey answer for weight question, also send to Google Sheets and Segment.
+            // https://ladle.thinkific.com/api/course_player/v2/survey_answers/{id}.
             if (/\/survey_answers/.test(this._open.url)) {
                 let surveyPrompt = document.querySelector('.course-player__survey__prompt p');
                 if (surveyPrompt && (surveyPrompt.textContent.indexOf('weight') != -1)) {
-                    analytics.identify(Thinkific.current_user.email, {
-                        weight: JSON.parse(body).survey_answer.survey_responses_attributes[0].text_response
+
+                    let weight = JSON.parse(body).survey_answer.survey_responses_attributes[0].text_response;
+                    let email = Thinkific.current_user.email;
+
+                    // Look up current lesson's chapter ID in course's chapter array.
+                    // Return zero-based index (week 1 is actually chapter 1 anyway).
+                    let week = courseData.chapters.map(function(chapter) {
+                        return chapter.id;
+                    }).indexOf(parseInt(currentLesson.chapter_id));
+
+                    // Param names must match sheet headers.
+                    let params = {
+                        sheet: 'weights',
+                        email: email,
+                        week: week,
+                        weight: weight
+                    };
+
+                    get(GOOGLE_URL + '?' + paramsToURLQuery(params));
+
+                    analytics.identify(email, {
+                        weight: weight
                     });
                 }
             }
@@ -213,9 +235,7 @@
 
                 data.user = Thinkific.current_user;
                 
-                // Send lesson completion data to Google Sheets.
-                const URL = 'https://script.google.com/macros/s/AKfycbwjN5WYg9KqiBVssqNtFT4XvRoiqIS4L5hScAp8rNIMptOY4l4/exec';
-                
+                // Send lesson completion data to Google Sheets.                
                 // Param names must match sheet headers.
                 let params = {
                     sheet: 'lesson_completions',
@@ -226,36 +246,36 @@
                     lesson_id: data.lesson.id
                 };
 
-                get(URL + '?' + paramsToURLQuery(params));
+                get(GOOGLE_URL + '?' + paramsToURLQuery(params));
 
                 // Send lesson completion data to Segment.
                 analytics.track('Lesson Completed', {
                     acValue: data.lesson.name
                 });
             });
-
-            function get(url, onSuccessResponse) {
-                let xhr = new XMLHttpRequest();
-                if (onSuccessResponse) {
-                    xhr.onreadystatechange = function() {
-                        if ((this.readyState == 4) && (this.status == 200)) {
-                            onSuccessResponse.call(this);
-                        }
-                    };
-                }
-                xhr.open("GET", url);
-                xhr.send();
-            }
-
-            function paramsToURLQuery(params) {
-                return Object.keys(params)
-                    .map(function(key){
-                        return key + '=' + encodeURIComponent(params[key])
-                    })
-                    .join('&');
-            }
         }
     });
+
+    function get(url, onSuccessResponse) {
+        let xhr = new XMLHttpRequest();
+        if (onSuccessResponse) {
+            xhr.onreadystatechange = function() {
+                if ((this.readyState == 4) && (this.status == 200)) {
+                    onSuccessResponse.call(this);
+                }
+            };
+        }
+        xhr.open("GET", url);
+        xhr.send();
+    }
+
+    function paramsToURLQuery(params) {
+        return Object.keys(params)
+            .map(function(key){
+                return key + '=' + encodeURIComponent(params[key])
+            })
+            .join('&');
+    }
 
     // Segment integration.
     !function(){var analytics=window.analytics=window.analytics||[];if(!analytics.initialize)if(analytics.invoked)window.console&&console.error&&console.error("Segment snippet included twice.");else{analytics.invoked=!0;analytics.methods=["trackSubmit","trackClick","trackLink","trackForm","pageview","identify","reset","group","track","ready","alias","debug","page","once","off","on"];analytics.factory=function(t){return function(){var e=Array.prototype.slice.call(arguments);e.unshift(t);analytics.push(e);return analytics}};for(var t=0;t<analytics.methods.length;t++){var e=analytics.methods[t];analytics[e]=analytics.factory(e)}analytics.load=function(t,e){var n=document.createElement("script");n.type="text/javascript";n.async=!0;n.src="https://cdn.segment.com/analytics.js/v1/"+t+"/analytics.min.js";var a=document.getElementsByTagName("script")[0];a.parentNode.insertBefore(n,a);analytics._loadOptions=e};analytics.SNIPPET_VERSION="4.1.0";
