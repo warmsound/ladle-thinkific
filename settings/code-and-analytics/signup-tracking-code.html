@@ -5,6 +5,16 @@
             analytics.track('User Signed Up', {
                 acValue: {{id}}
             });
+            
+            // Update contact with phone number saved in local storage (captured at sign-up time).  
+            let phoneNumber = localStorage.getItem('ladle.phoneNumber');
+            if (phoneNumber) {
+                analytics.identify('{{email}}', {
+                    phone: phoneNumber
+                });
+                localStorage.removeItem('ladle.phoneNumber');
+            }
+
             clearInterval(checkSegmentReady);
         }
     }, 1000);

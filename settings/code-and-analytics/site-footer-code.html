@@ -130,6 +130,20 @@
     }
 
     $(function() {
+
+        // Capture phone number from sign-up form, and save to local storage for use in sign-up tracking code i.e. once we know
+        // that sign-up has been successful.
+        let signupForm = document.querySelector('.user-sign-up > form');
+        if (signupForm) {
+            signupForm.addEventListener('submit', function (event) {
+                let phoneNumberInput = signupForm.querySelector('input[placeholder="Phone Number"]');
+                if (phoneNumberInput) {
+                    let phoneNumber = phoneNumberInput.value;
+                    localStorage.setItem('ladle.phoneNumber', phoneNumber);
+                }
+            });
+        }
+
         if(typeof(CoursePlayerV2) !== 'undefined') {
 
             // Documentation about sending parameterised events to ActiveCampaign: https://segment.com/docs/destinations/activecampaign/.
