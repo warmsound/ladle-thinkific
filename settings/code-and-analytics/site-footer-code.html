@@ -50,12 +50,22 @@
                 // By comparing old and new enrollment data, we can determine if a chapter was completed.
                 // Can't use CoursePlayerV2 hooks:contentWasCompleted, because this is not fired on completion of a survey (and
                 // possibly other content type).
-                let completedChapter = getCompletedChapter(enrollmentData, newEnrollmentData);
-                if (completedChapter) {
+                let completedChapter = getCompletedChapterIndex(enrollmentData, newEnrollmentData);
+                if (completedChapter !== null) {
 
                     // Send chapter completion data to Segment.
                     analytics.track('Chapter Completed', {
-                        acValue: completedChapter.name
+                        acValue: completedChapter
+                    });
+                }
+
+                // We can also determine if a chapter was started.
+                let startedChapter = getStartedChapterIndex(enrollmentData, newEnrollmentData);
+                if (startedChapter !== null) {
+
+                    // Send chapter started data to Segment.
+                    analytics.track('Chapter Started', {
+                        acValue: startedChapter
                     });
                 }
 
@@ -111,9 +121,9 @@
     };   
     hookAjax(ajaxHooks);
 
-    // Return data for any chapter completed, null otherwise.
+    // Return index for any chapter completed, null otherwise.
     // Determine by comparing old and new enrollment data.
-    function getCompletedChapter(oldEnrollmentData, newEnrollmentData) {
+    function getCompletedChapterIndex(oldEnrollmentData, newEnrollmentData) {
         if (!(oldEnrollmentData && newEnrollmentData)) {
             return null;
         }
@@ -161,7 +171,66 @@
 
             // Chapter has just been completed if it wasn't complete, but now is.
             if (!chapterWasComplete && chapterIsComplete) {
-                return chapter;
+                return i;
+            }
+        }
+
+        return null;
+    }
+
+    // Return index for any chapter started, null otherwise.
+    // Determine by comparing old and new enrollment data.
+    // A chapter is started when the first user content is added for a given chapter.
+    // TODO: Could be optimised by testing *current* chapter only i.e. chapter that currentLesson belongs to.
+    function getStartedChapterIndex(oldEnrollmentData, newEnrollmentData) {
+        if (!(oldEnrollmentData && newEnrollmentData)) {
+            return null;
+        }
+
+        // For each chapter.
+        let i, chapter;
+        for (i = 0; i < courseData.chapters.length; ++i) {
+            chapter = courseData.chapters[i];
+
+            let chapterWasStarted = false;
+            let chapterIsStarted = false;
+            let j, lessonId;
+
+            // For each lesson in chapter.
+            for (j = 0; j < chapter.content_ids.length; ++j) {
+                lessonId = chapter.content_ids[j];
+
+                // Lesson was started if its user content exists in old enrollment data.
+                // enrollmentData.user_contents not present for new users.
+                let lessonWasStarted = oldEnrollmentData.user_contents && (oldEnrollmentData.user_contents.filter(function(content) {
+                    return (content.content_id == lessonId);
+                }).length == 1);
+
+                if (lessonWasStarted) {
+                    chapterWasStarted = true;
+                    break;
+                }
+            }
+
+            // For each lesson in chapter.
+            for (j = 0; j < chapter.content_ids.length; ++j) {
+                lessonId = chapter.content_ids[j];
+
+                // Lesson is started if its user content exists in new enrollment data.
+                // enrollmentData.user_contents not present for new users.
+                let lessonIsStarted = newEnrollmentData.user_contents && (newEnrollmentData.user_contents.filter(function(content) {
+                    return (content.content_id == lessonId);
+                }).length == 1);
+
+                if (lessonIsStarted) {
+                    chapterIsStarted = true;
+                    break;
+                }
+            }
+
+            // Chapter has just been started if it wasn't started, but now is.
+            if (!chapterWasStarted && chapterIsStarted) {
+                return i;
             }
         }
 
@@ -207,6 +276,14 @@
             CoursePlayerV2.on('hooks:contentDidChange', function(data) {
                 //console.log('contentDidChange', data);
 
+                // Keep track of current lesson e.g. for tracking survey results.
+                currentLesson = data.lesson;
+
+                // Manually request updated enrollment data for Chapter Started detection (initiated by AJAX hook).
+                // Navigating to a previously-unseen lesson will add a user content with { complete: false }.
+                get('https://' + courseData.course.subdomain + '.thinkific.com/api/course_player/v2/enrollments?course_slug=' +
+                    courseData.course.slug, function() {}); // Dummy onLoad() so that hooked AJAX's onload() is called.
+
                 // enrollmentData.user_contents not present for new users.
                 let lessonIsComplete = enrollmentData.user_contents && (enrollmentData.user_contents.filter(function(content) {
                     return ((content.content_id == data.lesson.id) && (content.complete == true));
@@ -224,9 +301,6 @@
                 analytics.track('Lesson Viewed', {
                     acValue: data.lesson.name
                 });
-
-                // Also keep track of current lesson e.g. for tracking survey results.
-                currentLesson = data.lesson;
             });
 
             // - This is fired when the student clicks the "Next" button and completes the lesson.
@@ -256,14 +330,10 @@
         }
     });
 
-    function get(url, onSuccessResponse) {
+    function get(url, onLoad) {
         let xhr = new XMLHttpRequest();
-        if (onSuccessResponse) {
-            xhr.onreadystatechange = function() {
-                if ((this.readyState == 4) && (this.status == 200)) {
-                    onSuccessResponse.call(this);
-                }
-            };
+        if (onLoad) {
+            xhr.onload = onLoad;
         }
         xhr.open("GET", url);
         xhr.send();
