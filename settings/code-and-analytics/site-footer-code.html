@@ -146,6 +146,22 @@
             });
         }
 
+        // If this is the "Your Profile" form, and the user has just updated their profile successfully, re-send phone number in
+        // case it has changed.
+        let accountForm = document.querySelector('div#account form[action="/account"]');
+        if (accountForm) {
+            let profileSuccessfullyUpdated = document.querySelector('div#notifications div[data-message="Your profile was successfully updated."]');
+            if (profileSuccessfullyUpdated) {
+                let phoneNumberInput = accountForm.querySelector('input[name="user[profile_attributes][custom_profile_fields_attributes][0][value]"');
+                if (phoneNumberInput) {
+                    let phoneNumber = phoneNumberInput.value;
+                    analytics.identify(Thinkific.current_user.email, {
+                        phone: phoneNumber
+                    });
+                }
+            }
+        }
+
         if(typeof(CoursePlayerV2) !== 'undefined') {
 
             // Documentation about sending parameterised events to ActiveCampaign: https://segment.com/docs/destinations/activecampaign/.
