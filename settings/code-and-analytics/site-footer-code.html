@@ -116,6 +116,24 @@
                         weight: weight
                     });
                 }
+
+            // If sending user content with null 'completed_at', user is viewing lesson for very first time.
+            // Send lesson started event to Segment.
+            // TODO: Avoid sending this when user marks lesson as incomplete.
+            // https://ladle.thinkific.com/api/course_player/v2/user_contents.
+            } else if (/\/user_contents/.test(this._open.url)) {
+                let userContent = JSON.parse(body).user_content;
+                if (userContent.completed_at === null) {
+
+                    // Lookup lesson data within course data, using content ID.
+                    let lesson = courseData.contents.filter(function(content) {
+                        return (content.id == parseInt(userContent.content_id));
+                    })[0];
+
+                    analytics.track('Lesson Started', {
+                        acValue: lesson.name
+                    });
+                }
             }
         }
     };   
@@ -284,19 +302,6 @@
                 get('https://' + courseData.course.subdomain + '.thinkific.com/api/course_player/v2/enrollments?course_slug=' +
                     courseData.course.slug, function() {}); // Dummy onLoad() so that hooked AJAX's onload() is called.
 
-                // enrollmentData.user_contents not present for new users.
-                let lessonIsComplete = enrollmentData.user_contents && (enrollmentData.user_contents.filter(function(content) {
-                    return ((content.content_id == data.lesson.id) && (content.complete == true));
-                }).length > 0);
-
-                if (!lessonIsComplete) {
-
-                    // Send lesson started data to Segment, for incomplete lessons only.
-                    analytics.track('Lesson Started', {
-                        acValue: data.lesson.name
-                    });
-                }
-
                 // Send lesson viewed data to Segment, for both incomplete and completed lessons.
                 analytics.track('Lesson Viewed', {
                     acValue: data.lesson.name
@@ -309,7 +314,7 @@
 
                 data.user = Thinkific.current_user;
                 
-                // Send lesson completion data to Google Sheets.                
+                // Send lesson completion data to Google Sheets.
                 // Param names must match sheet headers.
                 let params = {
                     sheet: 'lesson_completions',
