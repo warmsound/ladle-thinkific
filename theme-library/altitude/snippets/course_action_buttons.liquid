@@ -16,6 +16,7 @@
 
       {% if course.user_can_purchase %}
         {% include "button" link: course.links.buy, button_type: "primary", text: course.buy_button_text %}
+        {% include "submit_coupon" %}
       {% endif %}
 
       {% if course.user_can_resume %}

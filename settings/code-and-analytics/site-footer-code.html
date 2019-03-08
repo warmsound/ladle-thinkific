@@ -22,6 +22,7 @@
     }
 </style>
 
+<!-- Segment and Google tracking -->
 <script type="text/javascript">
     const GOOGLE_URL = 'https://script.google.com/macros/s/AKfycbwjN5WYg9KqiBVssqNtFT4XvRoiqIS4L5hScAp8rNIMptOY4l4/exec';
 
@@ -357,4 +358,30 @@
     analytics.load("CqHOerUm8gocR9dwT9yZNFtt78jhM3uz");
     analytics.page();
     }}();
+</script>
+
+<!-- Custom site behaviour -->
+<script type="text/javascript">
+
+    // Submit coupon functionality on course landing page.
+    (function handleSubmitCoupon() {
+        let couponInput = document.querySelector('input#enter-coupon-code');
+        if (!couponInput) {
+            return;
+        }
+
+        let submitCoupon = document.querySelector('.btn.submit-coupon');
+        const submitCouponOriginalHref = submitCoupon.href;
+
+        // Enable/disable submit coupon button depending on whether user has entered complete coupon.
+        // Set button href to coupon URL when user has entered complete coupon.
+        couponInput.addEventListener('input', function (event) {
+            if (this.value.length == this.maxLength) {
+                submitCoupon.classList.remove('disable');
+                submitCoupon.href = submitCouponOriginalHref + '?coupon=' + this.value;
+            } else {
+                submitCoupon.classList.add('disable');
+            }
+        });
+    })();
 </script>
