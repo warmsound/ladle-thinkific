@@ -375,14 +375,17 @@
 
         // Enable/disable submit coupon button depending on whether user has entered complete coupon.
         // Set button href to coupon URL when user has entered complete coupon.
-        couponInput.addEventListener('input', function (event) {
+        // Do this immediately (in case browser auto-fills input), and when user changes input text.
+        function enableDisableSubmitCoupon() {
             if (this.value.length == this.maxLength) {
                 submitCoupon.classList.remove('disable');
                 submitCoupon.href = submitCouponOriginalHref + '?coupon=' + this.value;
             } else {
                 submitCoupon.classList.add('disable');
             }
-        });
+        }
+        enableDisableSubmitCoupon.call(couponInput);
+        couponInput.addEventListener('input', enableDisableSubmitCoupon.bind(couponInput));
 
         // Submit coupon if ENTER is pressed.
         couponInput.addEventListener('keydown', function (event) {
