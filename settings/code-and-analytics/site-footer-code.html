@@ -383,5 +383,12 @@
                 submitCoupon.classList.add('disable');
             }
         });
+
+        // Submit coupon if ENTER is pressed.
+        couponInput.addEventListener('keydown', function (event) {
+            if (event.which == 13) {
+                window.location = submitCoupon.href;
+            }
+        });
     })();
 </script>
