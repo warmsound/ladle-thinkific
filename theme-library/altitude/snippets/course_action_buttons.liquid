@@ -1,0 +1,60 @@
+{% comment %}
+  These are the buttons that can appear on a course landing page
+  Free Trial, Buy, Enroll for Free, etc.
+{% endcomment %}
+
+{% assign course = page.course %}
+
+<div class="course-action-buttons__container">
+  {% unless course.is_draft %}
+    {% if course.is_public %}
+
+      {% if course.has_free_trial %}
+        {% assign trial_text = 'liquid.partials.course_landing_page_action_buttons.link_free_trial' | translate %}
+        {% include "button" link: course.links.enroll_free_trial, button_type: "secondary", text: trial_text %}
+      {% endif %}
+
+      {% if course.user_can_purchase %}
+        {% include "button" link: course.links.buy, button_type: "primary", text: course.buy_button_text %}
+        {% include "submit_coupon" %}
+      {% endif %}
+
+      {% if course.user_can_resume %}
+        {% unless course.user_enrollment_complete %}
+          {% assign resume_text = 'liquid.partials.course_landing_page_action_buttons.link_resume_course' | translate %}
+          {% include "button" link: course.links.resume, button_type: "primary", text: resume_text %}
+        {% else %}
+          {% assign replay_text = 'liquid.partials.course_landing_page_action_buttons.link_replay_course' | translate %}
+          {% include "button" link: course.links.resume, button_type: "primary", text: replay_text %}
+        {% endunless %}
+        {% if course.reviews_enabled %}
+          {% assign rate_text = 'liquid.partials.course_landing_page_action_buttons.link_rate_course' | translate %}
+          {% include "button" link: course.links.review, button_type: "primary", text: rate_text %}
+        {% endif %}
+      {% endif %}
+
+      {% if course.is_free %}
+        {% assign enroll_free_text = 'liquid.partials.course_landing_page_action_buttons.link_enroll_free' | translate %}
+        {% include "button" link: course.links.enroll_free, button_type: "primary", text: enroll_free_text %}
+      {% endif %}
+
+    {% else %}
+
+      {% if course.user_can_resume %}
+        {% unless course.user_enrollment_complete %}
+          {% assign resume_text = 'liquid.partials.course_landing_page_action_buttons.link_resume_course' | translate %}
+          {% include "button" link: course.links.resume, button_type: "primary", text: resume_text %}
+        {% else %}
+          {% assign replay_text = 'liquid.partials.course_landing_page_action_buttons.link_replay_course' | translate %}
+          {% include "button" link: course.links.resume, button_type: "primary", text: replay_text %}
+        {% endunless %}
+      {% else %}
+        <p class="product__private-title">
+          <i class="icon-lock"></i>
+          {{ 'liquid.partials.course_landing_page_action_buttons.private_course_cta_text' | translate: site_support_email: site.support_email }}
+        </p>
+      {% endif %}
+
+    {% endif %}
+  {% endunless %}
+</div>

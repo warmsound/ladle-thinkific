@@ -1,0 +1,16 @@
+{% assign show_enter_coupon = true %}
+
+{% if page.coupon_code_provided %}
+  {% if page.coupon.is_valid %}
+    {% assign show_enter_coupon = false %}
+    <p style="margin-bottom: 1rem; color: lightgreen !important;">Coupon {{page.coupon.name}} has been applied.</p>
+  {% else %}
+    <p style="margin-bottom: 1rem; color: red !important;">Coupon has not been recognised.</p>
+  {% endif %}
+{% endif %}
+
+{% if show_enter_coupon %}
+  <p style="margin-bottom: 1rem;">Have a coupon?</p>
+  <input type="text" id="enter-coupon-code" placeholder="Enter coupon code" maxlength="5"><br>
+  {% include "button" link: course.links.landing_page_url, button_type: "primary submit-coupon disable", text: "Apply Coupon" %}
+{% endif %}
