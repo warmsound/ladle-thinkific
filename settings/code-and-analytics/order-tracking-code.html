@@ -1,44 +1,45 @@
 <!-- The following code is executed on the "Thank you for purchasing" page, which is shown even if the user has applied a
      coupon which makes the course free. -->
 <script type="text/javascript">
+    (function trackPurchasesInGoogle() {
+        // Duplicated from site-footer-code.html.
+        const GOOGLE_URL = 'https://script.google.com/macros/s/AKfycbwjN5WYg9KqiBVssqNtFT4XvRoiqIS4L5hScAp8rNIMptOY4l4/exec';
 
-    // Already defined in site-footer-code.html.
-    //const GOOGLE_URL = 'https://script.google.com/macros/s/AKfycbwjN5WYg9KqiBVssqNtFT4XvRoiqIS4L5hScAp8rNIMptOY4l4/exec';
-
-    // Duplicated from site-footer-code.html.
-    function get(url, onLoad) {
-        let xhr = new XMLHttpRequest();
-        if (onLoad) {
-            xhr.onload = onLoad;
+        // Duplicated from site-footer-code.html.
+        function get(url, onLoad) {
+            let xhr = new XMLHttpRequest();
+            if (onLoad) {
+                xhr.onload = onLoad;
+            }
+            xhr.open("GET", url);
+            xhr.send();
         }
-        xhr.open("GET", url);
-        xhr.send();
-    }
 
-    // Duplicated from site-footer-code.html.
-    function paramsToURLQuery(params) {
-        return Object.keys(params)
-            .map(function(key){
-                return key + '=' + encodeURIComponent(params[key])
-            })
-            .join('&');
-    }
+        // Duplicated from site-footer-code.html.
+        function paramsToURLQuery(params) {
+            return Object.keys(params)
+                .map(function(key){
+                    return key + '=' + encodeURIComponent(params[key])
+                })
+                .join('&');
+        }
 
-    // Send lesson completion data to Google Sheets.
-    // Param names must match sheet headers.
-    let params = {
-        sheet: 'purchases',
-        order_number: {{order_number}},
-        billing_name: '{{billing_name}}',
-        billing_email: '{{billing_email}}',
-        payment_method: '{{payment_method}}',
-        total_price_in_cents: {{total_price_in_cents}},
-        total_price: {{total_price}},
-        referral_code: '{{referral_code}}',
-        product_id: {{product_id}},
-        payment_provider: '{{payment_provider}}',
-        buyer_identifier: '{{buyer_identifier}}'
-    };
+        // Send lesson completion data to Google Sheets.
+        // Param names must match sheet headers.
+        let params = {
+            sheet: 'purchases',
+            order_number: {{order_number}},
+            billing_name: '{{billing_name}}',
+            billing_email: '{{billing_email}}',
+            payment_method: '{{payment_method}}',
+            total_price_in_cents: {{total_price_in_cents}},
+            total_price: {{total_price}},
+            referral_code: '{{referral_code}}',
+            product_id: {{product_id}},
+            payment_provider: '{{payment_provider}}',
+            buyer_identifier: '{{buyer_identifier}}'
+        };
 
-    get(GOOGLE_URL + '?' + paramsToURLQuery(params));
+        get(GOOGLE_URL + '?' + paramsToURLQuery(params));
+    })();
 </script>
