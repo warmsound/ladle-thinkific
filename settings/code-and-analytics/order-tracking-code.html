@@ -2,6 +2,7 @@
      coupon which makes the course free. -->
 <script type="text/javascript">
     (function trackPurchasesInGoogle() {
+        
         // Duplicated from site-footer-code.html.
         const GOOGLE_URL = 'https://script.google.com/macros/s/AKfycbwjN5WYg9KqiBVssqNtFT4XvRoiqIS4L5hScAp8rNIMptOY4l4/exec';
 
@@ -31,6 +32,7 @@
             order_number: {{order_number}},
             billing_name: '{{billing_name}}',
             billing_email: '{{billing_email}}',
+            coupon: window.COUPON, // Recorded by recordCoupon() function in <script> at bottom of checkout_thankyou_page.liquid.
             payment_method: '{{payment_method}}',
             total_price_in_cents: {{total_price_in_cents}},
             total_price: {{total_price}},

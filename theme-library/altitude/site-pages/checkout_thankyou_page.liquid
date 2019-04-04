@@ -63,3 +63,14 @@
     </div>
   </div>
 </div>
+
+<!-- Record coupon for use by Google purchase tracking. -->
+<script type="text/javascript">
+    (function recordCoupon() {
+        {% if page.order.coupon.is_valid %}
+          window.COUPON = '{{ page.order.coupon.name }}';
+        {% else %}
+          window.COUPON = '';
+        {% endif %}
+    })();
+</script>
