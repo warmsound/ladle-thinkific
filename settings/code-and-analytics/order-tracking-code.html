@@ -33,6 +33,8 @@
             billing_name: '{{billing_name}}',
             billing_email: '{{billing_email}}',
             coupon: window.COUPON, // Recorded by recordCoupon() function in <script> at bottom of checkout_thankyou_page.liquid.
+            weight: localStorage.getItem('ladle.weight'), // Recorded by signup form tracking in site-footer-code.html.
+            phone_number: localStorage.getItem('ladle.phoneNumber'), // Recorded by signup form tracking in site-footer-code.html.
             payment_method: '{{payment_method}}',
             total_price_in_cents: {{total_price_in_cents}},
             total_price: {{total_price}},
@@ -43,5 +45,8 @@
         };
 
         get(GOOGLE_URL + '?' + paramsToURLQuery(params));
+
+        localStorage.removeItem('ladle.weight');
+        localStorage.removeItem('ladle.phoneNumber');
     })();
 </script>

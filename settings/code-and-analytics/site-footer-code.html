@@ -261,13 +261,22 @@
 
             // Capture phone number from sign-up form, and save to local storage for use in sign-up tracking code i.e. once we know
             // that sign-up has been successful.
-            let signupForm = document.querySelector('.user-sign-up > form');
+            // #2 Additionally save new weight custom field to local storage. Both this and phone number are now needed for
+            // Google purchase tracking in signup-tracking-code.html.
+            // First selector is during normal sign-up process; second selector is when user is asked to sign up during
+            // enrollment.
+            let signupForm = document.querySelector('.user-sign-up > form') || document.querySelector('#sign-up > form');
             if (signupForm) {
                 signupForm.addEventListener('submit', function (event) {
                     let phoneNumberInput = signupForm.querySelector('input[placeholder="Phone Number"]');
                     if (phoneNumberInput) {
                         let phoneNumber = phoneNumberInput.value;
                         localStorage.setItem('ladle.phoneNumber', phoneNumber);
+                    }
+                    let weightInput = signupForm.querySelector('input[placeholder="Your weight (kg) (required)"]');
+                    if (weightInput) {
+                        let weight = weightInput.value;
+                        localStorage.setItem('ladle.weight', weight);
                     }
                 });
             }
