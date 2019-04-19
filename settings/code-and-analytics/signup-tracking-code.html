@@ -6,11 +6,16 @@
                 acValue: {{id}}
             });
             
-            // Update contact with phone number saved in local storage (captured at sign-up time).  
+            // Update contact with phone number saved in local storage (captured at sign-up time).
             let phoneNumber = localStorage.getItem('ladle.phoneNumber');
-            if (phoneNumber) {
+
+            // #3 Also track initial weight similarly captured.
+            let weight = localStorage.getItem('ladle.weight');
+
+            if (phoneNumber !== null || weight !== null) {
                 analytics.identify('{{email}}', {
-                    phone: phoneNumber
+                    phone: phoneNumber,
+                    weight: weight
                 });
                 // #2 Postpone removal of phone number from local storage, as it's now also required by order-tracking-code.html.
                 //localStorage.removeItem('ladle.phoneNumber');
