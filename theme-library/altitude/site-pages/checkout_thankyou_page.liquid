@@ -1,0 +1,76 @@
+{% comment %}
+  This is the checkout thankyou page.
+  Specifically, this is the page where a user lands after purchasing a course
+  or a bundle.
+{% endcomment %}
+<div id="orders">
+  <div class="checkout-form checkout-thankyou" id="content-push">
+    <div class="column">
+      <div class="row">
+        <div class="col-sm-10 col-sm-offset-1 col-md-8 col-md-offset-2">
+          <div class="checkout-form-container">
+            <div class="checkout-form-container__inner">
+              <div class="checkout-form__body">
+                <div class="section-title text-center">
+                  {{ 'liquid.views.checkout_thankyou_page.title_thank_you' | translate }}
+                  {% for item in page.items %}
+                    {{ item.name }}
+                  {% endfor %}
+                </div>
+
+                <div id="cart-container">
+                  {% if page.product_is_course %}
+                    <div class="text-center">
+                      <a class="btn btn-primary btn-large" href="{{ page.take_course_url }}">
+                        {{ 'liquid.views.checkout_thankyou_page.link_start_learning' | translate }}
+                      </a>
+                    </div>
+                  {% else %}
+                    {% for bundled_course in page.bundled_courses %}
+                      <div class="row checkout-thankyou__course">
+                        <div class="col-sm-8">
+                          <div class="checkout-thankyou__course-name">
+                            {{ bundled_course.name }}
+                          </div>
+                        </div>
+                        <div class="col-sm-4 checkout-thankyou__button text-right">
+                          <a class="btn btn-primary" href="{{ bundled_course.links.resume }}">
+                            {{ 'liquid.views.checkout_thankyou_page.link_start_learning' | translate }}
+                          </a>
+                      </div>
+                      </div>
+                    {% endfor %}
+                    {% if page.has_more_bundled_courses %}
+                      <div class="checkout-bundle__more_enrollments_limit">
+                        {{ page.remaining_bundle_courses_message }}
+                      </div>
+                    {% endif %}
+                  {% endif %}
+                  <div class="checkout-form__bottom">
+                    <p>
+                      {{ 'liquid.views.checkout_thankyou_page.text_info' | translate }}
+                      <a href="{{ page.order_receipt_url }}", class="text-underline">
+                        {{ 'liquid.views.checkout_thankyou_page.link_order_receipt' | translate }}
+                      </a>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Record coupon for use by Google purchase tracking. -->
+<script type="text/javascript">
+    (function recordCoupon() {
+        {% if page.order.coupon.is_valid %}
+          window.COUPON = '{{ page.order.coupon.name }}';
+        {% else %}
+          window.COUPON = '';
+        {% endif %}
+    })();
+</script>
